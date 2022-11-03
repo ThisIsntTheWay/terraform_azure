@@ -2,6 +2,11 @@
 # Virtual Machines
 variable "serverType" {
   description = "What type of service the VM will provide (ap, dc, db...)"
+
+  validation {
+    condition = can(regex("[^0-9]{2}", var.serverType)) && length(var.serverType) == 2
+    error_message = "'serverType' must be 2 characters long and may only contain letters."
+  }
 }
 
 variable "serverSize" {
@@ -16,20 +21,21 @@ variable "serverSku" {
 
 variable "adminUsername" {
   description = "Username for the administrator account"
-  default = "12345678"
-
+  default = "adminDude"
+  
   validation {
-    condition = length(var.adminUsername) < 8 || length(var.adminUsername) > 123
-    error_message = "Value for 'adminUsername' must be between 8-123 characters."
+    condition = !can(regex("^(admin|administrator)$", var.adminUsername)) && length(var.adminUsername) >= 3
+    error_message = "Value for 'adminUsername' is illegal or too short (min: 3)."
   }
 }
 
 variable "adminPassword" {
   description = "Password for the administrator account"
-  default = "12345678"
+  default = "abCD1234"
 
   validation {
-    condition = length(var.adminPassword) > 8 && length(var.adminPassword) < 123
+    # ToDo: Implement password complexity regex match: ^(?=.*[0-9])(?=.*[a-zA-Z]).{8,123}$
+    condition = length(var.adminPassword) >= 8 && length(var.adminPassword) <= 123
     error_message = "Value for 'adminPassword' must be between 8-123 characters."
   }
 }
