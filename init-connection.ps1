@@ -2,7 +2,7 @@
 
 Param(
 	[Parameter(Mandatory=$true)]
-	[string] $tenant
+	[string] $Tenant
 )
 
 # Prereqs
@@ -50,7 +50,7 @@ try {
 
 try {	
 	# Check if SP data exists
-	$spFile = ".\tenantData\$tenant.json"
+	$spFile = ".\tenantData\$Tenant.json"
 	if (Test-Path $spFile) {
 		''; Write-Host "Attempting to read sp data from '$spFile'..." -f cyan
 		$sp = Get-Content $spFile -Encoding UTF8 | ConvertFrom-Json
@@ -72,8 +72,8 @@ try {
 		Write-host "> Subscription ID : $($sp.subscriptionId)" -f yellow
 	} else {
 		# Conduct login if no sp data json was found.
-		Write-Host "Please log in to your tenant '$tenant'." -f cyan
-		
+		Write-Host "Please log in to your tenant '$Tenant'." -f cyan
+
 		$tenantData = az login | ConvertFrom-Json
 		Write-Host "Connected to tenant!" -f green
 		Write-Host "> Subscription ID : $($tenantData.id)" -f yellow
@@ -103,6 +103,8 @@ try {
 	$env:ARM_SUBSCRIPTION_ID = $spData.subscriptionId
 	$env:ARM_TENANT_ID = $spData.tenant
 
+	$env:TF_VAR_tenant = $Tenant
+
 	# Ensure terraform.exe can be called regardless of location
 	$pathDelimiter = if ($env:PATH[-1] -eq ";") { $null } else { ";" }
 	$env:PATH += "$pathDelimiter$(Get-Location)"
@@ -116,7 +118,6 @@ try {
 		''; Write-Host "Terraform for Azure may now be used." -f green
 		Write-Host "To get started, navigate to a dir with .tf files and do: 'terraform init'" -f yellow
 	}
-	
 } catch {
 	throw $_
 }
