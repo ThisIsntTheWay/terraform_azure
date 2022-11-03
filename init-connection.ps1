@@ -72,7 +72,8 @@ try {
 		Write-host "> Subscription ID : $($sp.subscriptionId)" -f yellow
 	} else {
 		# Conduct login if no sp data json was found.
-		Write-Host "Please log in to your tenant." -f cyan
+		Write-Host "Please log in to your tenant '$tenant'." -f cyan
+		
 		$tenantData = az login | ConvertFrom-Json
 		Write-Host "Connected to tenant!" -f green
 		Write-Host "> Subscription ID : $($tenantData.id)" -f yellow
@@ -106,7 +107,16 @@ try {
 	$pathDelimiter = if ($env:PATH[-1] -eq ";") { $null } else { ";" }
 	$env:PATH += "$pathDelimiter$(Get-Location)"
 
-	Write-Host "Terraform for Azure is now ready." -f ready
+	if (Test-Path .\runbooks) {
+		''; Write-Host "Initializing terraform..." -f cyan
+
+		Set-Location .\runbooks
+		terraform init
+	} else {
+		''; Write-Host "Terraform for Azure may now be used." -f green
+		Write-Host "To get started, navigate to a dir with .tf files and do: 'terraform init'" -f yellow
+	}
+	
 } catch {
 	throw $_
 }
