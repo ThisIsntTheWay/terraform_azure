@@ -1,0 +1,7 @@
+# Dirs
+tenantData/
+*/.terraform/
+
+# Files
+.terraform*
+*.tfstate
