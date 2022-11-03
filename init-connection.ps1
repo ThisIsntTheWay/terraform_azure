@@ -1,3 +1,8 @@
+Param(
+	[Parameter(Mandatory=$true)]
+	[string] $tenant
+)
+
 # Prereqs
 Write-Host "Checking prerequisites..." -f yellow
 
@@ -26,7 +31,7 @@ try {
 	try {
 		Write-Warning "Installation of the Azure CLI requires elevated permissions."
 		Start-BitsTransfer https://aka.ms/installazurecliwindows .\AzureCLI.msi
-		Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet' -Verb runAs
+		Start-Process .\AzureCLI.msi -Wait -Verb runAs
 		
 		Write-Host "Cleanup..." -f yellow
 		Remove-Item .\AzureCLI.msi -Force -Confirm:$false
@@ -39,21 +44,14 @@ try {
 	}
 }
 
-''; Write-Host "> Prerequisites (now) met." -f green
+''; Write-Host "> Prerequisites met." -f green
 
-# Conduct login
-try {
-	Write-Host "Please log in to your tenant." -f cyan
-	$tenantData = az login | ConvertFrom-Json
-	Write-Host "> Connected to tenant!" -f green
-	Write-Host "  > Subscription ID : $($tenantData.id)" -f gray
-	Write-Host "  > Tenant ID       : $($tenantData.homeTenantId)" -f gray
-	
+try {	
 	# Check if SP data exists
-	$spFile = ".\tenantData\$($tenantData.homeTenantId).json"
+	$spFile = ".\tenantData\$tenant.json"
 	if (Test-Path $spFile) {
-		Write-Host "Attempting to read sp data from '$spFile'..." -f cyan
-		$sp = Get-Content $spFile -Encoding UTF8 | ConvertFrom-Json	
+		''; Write-Host "Attempting to read sp data from '$spFile'..." -f cyan
+		$sp = Get-Content $spFile -Encoding UTF8 | ConvertFrom-Json
 
 		# verify sp data json
 		$requiredProps = @(
@@ -68,8 +66,16 @@ try {
 			}
 		}
 		
-		Write-host "> Got sp: $($sp.displayName)" -f green
+		Write-host "> Tenant ID       : $($sp.tenant)" -f yellow
+		Write-host "> Subscription ID : $($sp.subscriptionId)" -f yellow
 	} else {
+		# Conduct login if no sp data json was found.
+		Write-Host "Please log in to your tenant." -f cyan
+		$tenantData = az login | ConvertFrom-Json
+		Write-Host "Connected to tenant!" -f green
+		Write-Host "> Subscription ID : $($tenantData.id)" -f yellow
+		Write-Host "> Tenant ID       : $($tenantData.homeTenantId)" -f yeelow
+
 		''; Write-Host "Acquiring subscription details..." -f cyan
 		$subId = (az account show | convertfrom-json).id
 		
@@ -93,6 +99,8 @@ try {
 	$env:ARM_CLIENT_SECRET = $spData.password
 	$env:ARM_SUBSCRIPTION_ID = $spData.subscriptionId
 	$env:ARM_TENANT_ID = $spData.tenant
+
+	Write-Host "Terraform for Azure is now ready." -f ready
 } catch {
 	throw $_
 }
