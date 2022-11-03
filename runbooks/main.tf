@@ -13,9 +13,3 @@ terraform {
 provider "azurerm" {
   features {}
 }
-
-resource "azurerm_resource_group" "rg" {
-  name     = "test-chno-prod-001"
-  location = "switzerlandnorth"
-}
-
