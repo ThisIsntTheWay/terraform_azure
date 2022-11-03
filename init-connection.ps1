@@ -1,3 +1,5 @@
+# Author: Valentin Klopfenstein
+
 Param(
 	[Parameter(Mandatory=$true)]
 	[string] $tenant
@@ -99,6 +101,10 @@ try {
 	$env:ARM_CLIENT_SECRET = $spData.password
 	$env:ARM_SUBSCRIPTION_ID = $spData.subscriptionId
 	$env:ARM_TENANT_ID = $spData.tenant
+
+	# Ensure terraform.exe can be called regardless of location
+	$pathDelimiter = if ($env:PATH[-1] -eq ";") { $null } else { ";" }
+	$env:PATH += "$pathDelimiter$(Get-Location)"
 
 	Write-Host "Terraform for Azure is now ready." -f ready
 } catch {
