@@ -1,6 +1,7 @@
 # Dirs
 tenantData/
 */.terraform/
+*/secrets/
 
 # Files
 .terraform*
