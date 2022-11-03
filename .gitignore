@@ -4,5 +4,5 @@ tenantData/
 
 # Files
 .terraform*
-*.tfstate
+*.tfstate*
 terraform*.exe
