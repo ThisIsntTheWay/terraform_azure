@@ -103,7 +103,9 @@ try {
 	$env:ARM_SUBSCRIPTION_ID = $spData.subscriptionId
 	$env:ARM_TENANT_ID = $spData.tenant
 
+	# Global terraform varaibles as set in variables.tf
 	$env:TF_VAR_tenant = $Tenant
+	$env:TF_VAR_author = (whoami)
 
 	# Ensure terraform.exe can be called regardless of location
 	$pathDelimiter = if ($env:PATH[-1] -eq ";") { $null } else { ";" }
