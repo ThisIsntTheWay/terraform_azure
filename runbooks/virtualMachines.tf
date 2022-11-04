@@ -11,8 +11,8 @@ resource "azurerm_network_interface" "nic" {
 }
 
 resource "azurerm_windows_virtual_machine" "main" {
-    # Bug: "Name" constrained to 15 characters
-  name                  = "${upper(var.tenant)}${upper(var.serverType)}001"
+  # Bug: "Name" constrained to 15 characters
+  name = "${upper(var.tenant)}${upper(var.serverType)}001"
   #computer_name         = "${var.tenant}-${var.serverType}-prod-chno-001"
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
