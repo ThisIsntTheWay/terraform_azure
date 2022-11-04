@@ -1,4 +1,21 @@
-# Author: Valentin Klopfenstein
+<#
+	.DESCRIPTION
+		Properly intializes terraform using tf data in .\runbooks
+
+		Downloads and installs the following software (if missing):
+		- Terraform
+		- Terragrub
+		- Azure CLI
+
+		If this script is executed with a new tenant, then the infrastructure will be prepared accordingly.
+	
+	.PARAMETER tenant
+		Tenant for which to initalize terraform for.
+		This information is ultimately used to load the appropriate json under .\tenantData
+
+	.AUTHOR
+		Valentin Klopfenstein
+#>
 
 Param(
 	[Parameter(Mandatory=$true)]
@@ -254,22 +271,21 @@ try {
 	$pathDelimiter = if ($env:PATH[-1] -eq ";") { $null } else { ";" }
 	$env:PATH += "$pathDelimiter$(Get-Location)"
 
-	if (Test-Path .\runbooks) {
-		''; Write-Host "Initializing terraform..." -f cyan
-		Write-Host @"
+	''; Write-Host "Initializing terraform..." -f cyan
+	Write-Host @"
 -backend-config="resource_group_name=$($sp.storageRg)" `
 -backend-config="storage_account_name=$($sp.storageAccount)" `
 -backend-config="container_name=$($sp.storageContainer)" `
 "@ -f Yellow
 
+	if (Test-Path .\runbooks) {
 		Set-Location .\runbooks
 		terraform init `
 			-backend-config="resource_group_name=$($sp.storageRg)" `
 			-backend-config="storage_account_name=$($sp.storageAccount)" `
 			-backend-config="container_name=$($sp.storageContainer)"
 	} else {
-		''; Write-Host "Terraform for Azure may now be used." -f green
-		Write-Warning "The runbooks directory was not found."
+		Write-Warning "The runbooks directory was not found, manual init is required!"
 	}
 } catch {
 	throw $_
