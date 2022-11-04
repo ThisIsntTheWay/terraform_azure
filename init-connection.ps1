@@ -15,7 +15,7 @@ if (-not (gci .\terraform*.exe)) {
 		Start-BitsTransfer https://releases.hashicorp.com/terraform/1.3.4/terraform_1.3.4_windows_amd64.zip .\terra.zip
 		Expand-Archive .\terra.zip .\
 		
-		Write-Host "Cleanup..." -f yellow
+		Write-Host "> Cleanup..." -f yellow
 		Remove-Item .\terra.zip -Force -Confirm:$false
 		
 		Write-Host "Binary acquired." -f green
@@ -33,9 +33,11 @@ try {
 	try {
 		Write-Warning "Installation of the Azure CLI requires elevated permissions."
 		Start-BitsTransfer https://aka.ms/installazurecliwindows .\AzureCLI.msi
-		Start-Process .\AzureCLI.msi -Wait -Verb runAs
 		
-		Write-Host "Cleanup..." -f yellow
+		Write-Host "> Beginning installation..." -f yellow
+		Start-Process msiexec.exe -Wait -ArgumentList "/I $((get-item .\AzureCLI.msi).FullName) /quiet" -verb runas
+		
+		Write-Host "> Cleanup..." -f yellow
 		Remove-Item .\AzureCLI.msi -Force -Confirm:$false
 		Write-Host "Azure CLI installed." -f green
 		
@@ -77,7 +79,7 @@ try {
 		$tenantData = az login | ConvertFrom-Json
 		Write-Host "Connected to tenant!" -f green
 		Write-Host "> Subscription ID : $($tenantData.id)" -f yellow
-		Write-Host "> Tenant ID       : $($tenantData.homeTenantId)" -f yeelow
+		Write-Host "> Tenant ID       : $($tenantData.homeTenantId)" -f yellow
 
 		''; Write-Host "Acquiring subscription details..." -f cyan
 		$subId = (az account show | convertfrom-json).id
