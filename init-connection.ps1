@@ -64,12 +64,26 @@ try {
 			"tenant"
 			"subscriptionId"
 		)
+
+		$missingProps = @()
 		$requiredProps | % { 
 			if (-not $sp."$_") {
-				throw "sp data json is incomplete: Missing property: '$_'."
+				$missingProps += $_
 			}
 		}
+
+		if ($missingProps.count -ne 0) {
+			throw "sp data json incomplete: Missing properties: '$($missingProps -join ", ")'."
+		}
 		
+		# Try to decrypt password
+		try {
+			$Ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToCoTaskMemUnicode($sp.password)
+			$password = [System.Runtime.InteropServices.Marshal]::PtrToStringUni($Ptr)
+			[System.Runtime.InteropServices.Marshal]::ZeroFreeCoTaskMemUnicode($Ptr)
+		 }
+		catch { throw "Could not decrypt password." }
+
 		Write-host "> Tenant ID       : $($sp.tenant)" -f yellow
 		Write-host "> Subscription ID : $($sp.subscriptionId)" -f yellow
 	} else {
@@ -85,13 +99,16 @@ try {
 		$subId = (az account show | convertfrom-json).id
 		
 		''; Write-Host "Creating a service principal with role 'Contributor'..." -f cyan
-		Write-Warning "This will store a plaintext password in .\tenantData!"
+		Write-Warning "This will store an encrypted password in .\tenantData!"
 		$sp = az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$subId" | ConvertFrom-Json
 		
 		# Store sp data for tenant
 		if (-not (Test-Path .\tenantData)) {
 			mkdir .\tenantData | out-null
 		}
+
+		$password = $sp.password
+		$sp.password = (ConvertTo-SecureString $password -AsPlainText -Force) | ConvertFrom-SecureString
 		
 		$sp | Add-Member -NotePropertyName "subscriptionId" -NotePropertyValue $tenantData.homeTenantId
 		$sp | ConvertTo-Json | Out-File $spFile -Encoding Utf8
@@ -101,7 +118,7 @@ try {
 	# Set env data
 	''; Write-Host "Setting env vars..." -f cyan
 	$env:ARM_CLIENT_ID = $spData.appId
-	$env:ARM_CLIENT_SECRET = $spData.password
+	$env:ARM_CLIENT_SECRET = $password
 	$env:ARM_SUBSCRIPTION_ID = $spData.subscriptionId
 	$env:ARM_TENANT_ID = $spData.tenant
 
