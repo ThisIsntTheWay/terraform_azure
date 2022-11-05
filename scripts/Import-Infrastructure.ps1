@@ -31,11 +31,12 @@ if (-not (Test-Path $outputDir)) {
 # Virtual machines
 $vmInv = az vm list | convertfrom-json
 $vmInv | % {
-    Write-Host $_.name -f cyan
+    $vmName = $_.name
+    Write-Host $vmName -f cyan
     try {
         $stub = (Get-Content ".\json\$($terraResource.vm)-stub.json") `
-            -replace "%identifier%", "$($_.name)" | ConvertFrom-Json
-        $base = $stub.resource."$($terraResource.vm)"."$($_.name)" # pointer!
+            -replace "%identifier%", "$vmName" | ConvertFrom-Json
+        $base = $stub.resource."$($terraResource.vm)"."$vmName" # pointer!
 
         $base.name = $_.name
         $base.location = $_.location
@@ -45,17 +46,40 @@ $vmInv | % {
         $base.os_disk.caching = $_.storageprofile.osDisk.caching
         $base.os_disk.storage_account_type = $_.storageprofile.osDisk.managedDisk.storageAccountType
     
+        $_.networkProfile.networkInterfaces | % {
+            $base.network_interface_ids += $_.id
+        }
+
+        $base.admin_username = $_.osProfile.adminUsername
+
+        # The admin password is irretrievable
+        Write-Host "> Please provide the admin password." -f yellow
+        Write-Host "  Leave blank to generate one." -f Yellow
+        $pass = Read-Host "Password"
+
+        if ([String]::IsNullOrEmpty($pass)) {
+            Write-Host "> Randomly generating one..." -f yellow
+            $pass = irm "https://www.passwordrandom.com/query?command=password"
+        }
+
+        $base.admin_password = $pass
+
         $base.source_image_reference.publisher = $_.storageProfile.imageReference.publisher
         $base.source_image_reference.offer = $_.storageProfile.imageReference.offer
         $base.source_image_reference.sku = $_.storageProfile.imageReference.sku
         $base.source_image_reference.version = $_.storageProfile.imageReference.version
     
-        $stub | ConvertTo-Json -Depth 5 | Out-File (Join-Path $outputDir "vm_$($_.name).tf.json") -Encoding UTF8 -Force
+        # Ensures no BOM in encoding
+        [IO.File]::WriteAllLines(
+            ((Join-Path $outputDir "vm_$vmName.tf.json") | Resolve-Path),
+            ($stub | ConvertTo-Json -Depth 5)
+        )
         
         # Import command
-        $importCommand = "terraform import `"$($terraResource.vm).$($_.name)`" `"$($_.id)`""
-        Write-Host "$> $importCommand" -f yellow
+        $importCommand = "terraform import `"$($terraResource.vm).$vmName`" `"$($_.id)`""
+        Write-Host "$> " -nonewline -f darkgray
+        Write-Host $importCommand -f blue
     } catch {
-        Write-Host "Error processing '$($_.name)': $_" -f red
+        Write-Host "Error processing '$vmName': $_" -f red
     }
 }
