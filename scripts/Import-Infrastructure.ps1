@@ -36,6 +36,9 @@ Param(
 # =========================
 $importCommands = @()
 
+$env:IMPORTER_outputDir = ".\output"
+$env:IMPORTER_explicitIdentifiers = $UseExplicitIdentifiers.IsPresent
+
 # =========================
 #           MAIN
 # =========================
@@ -45,7 +48,6 @@ try {
     throw $_
 }
 
-$env:IMPORTER_outputDir = ".\output"
 if (-not (Test-Path $env:IMPORTER_outputDir)) {
     mkdir $env:IMPORTER_outputDir | Out-Null
 }

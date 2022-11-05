@@ -51,11 +51,11 @@ function Get-ResourceGroups {
     Write-Host "Processing resource groups..." -f cyan
     $rgInv = (az group list | ConvertFrom-Json) | ? name -notlike "NetworkWatcher*"
     $rgInv | % {
-        $rgName = $_.name
-        Write-Host "> $rgName" -f yellow
+        $name = $_.name
+        Write-Host "> $name" -f yellow
         try {
-            if ($UseExplicitIdentifiers.IsPresent) {
-                $identifier = $rgName -replace "[^a-zA-Z0-9]", ""
+            if ($env:IMPORTER_explicitIdentifiers) {
+                $identifier = $name -replace "[^a-zA-Z0-9]", ""
             } else {
                 $identifier = "rg"
             }
@@ -66,12 +66,12 @@ function Get-ResourceGroups {
             $base = $stub.resource."$($terraResource.rg)"."$identifier" # pointer!
 
             $base.location = $_.location
-            $base.name = $rgName
+            $base.name = $name
 
             # Convert
             $splat = @{
                 inputStub = $stub
-                name = $rgName
+                name = $name
                 type = "rg"
                 identifier = $identifier
                 id = $_.id
@@ -79,7 +79,7 @@ function Get-ResourceGroups {
 
             $importCommands += Convert-Stub @splat
         } catch {
-            Write-Host "Error processing '$rgName': $_" -f red
+            Write-Host "Error processing '$name': $_" -f red
         }
     }
 
@@ -93,11 +93,11 @@ function Get-Vms {
     ''; Write-Host "Processing virtual machines..." -f cyan
     $vmInv = az vm list | ConvertFrom-Json
     $vmInv | % {
-        $vmName = $_.name
-        Write-Host "> $vmName" -f yellow
+        $name = $_.name
+        Write-Host "> $name" -f yellow
         try {
-            if ($UseExplicitIdentifiers.IsPresent) {
-                $identifier = $vmName -replace "[^a-zA-Z0-9]", ""
+            if ($env:IMPORTER_explicitIdentifiers) {
+                $identifier = $name -replace "[^a-zA-Z0-9]", ""
             } else {
                 $identifier = "vm"
             }
@@ -144,7 +144,7 @@ function Get-Vms {
             # Convert
             $splat = @{
                 inputStub = $stub
-                name = $vmName
+                name = $name
                 type = "vm"
                 identifier = $identifier
                 id = $_.id
@@ -152,7 +152,7 @@ function Get-Vms {
 
             $importCommands += Convert-Stub @splat
         } catch {
-            Write-Host "Error processing '$vmName': $_" -f red
+            Write-Host "Error processing '$name': $_" -f red
         }
     }
 
@@ -165,11 +165,11 @@ function Get-Vnets {
     ''; Write-Host "Processing VNET..." -f cyan
     $vnetInv = az network vnet list | ConvertFrom-Json
     $vnetInv | % {
-        $vnetName = $_.name
-        Write-Host "> $vnetName" -f yellow
+        $name = $_.name
+        Write-Host "> $name" -f yellow
         try {
-            if ($UseExplicitIdentifiers.IsPresent) {
-                $identifier = $vnetName -replace "[^a-zA-Z0-9]", ""
+            if ($env:IMPORTER_explicitIdentifiers) {
+                $identifier = $name -replace "[^a-zA-Z0-9]", ""
             } else {
                 $identifier = "vnet"
             }
@@ -178,24 +178,23 @@ function Get-Vnets {
                 -replace "%identifier%", "$identifier" | ConvertFrom-Json
             $base = $stub.resource."$($terraResource.vnet)"."$identifier"
 
-            $base.name = $vnetName
+            $base.name = $name
             $base.resource_group_name = $_.resourceGroup
             $base.location = $_.location
 
             $base.address_space = $_.addressSpace.addressPrefixes
 
-            # Convert
-            $splat = @{
+            $splatVnet = @{
                 inputStub = $stub
-                name = $vnetName
+                name = $name
                 type = "vnet"
                 identifier = $identifier
                 id = $_.id
             }
 
-            $importCommands += Convert-Stub @splat
+            $importCommands += Convert-Stub @splatVnet
         } catch {
-            Write-Host "Error processing '$vnetName': $_" -f red
+            Write-Host "Error processing '$name': $_" -f red
         }
     }
 
