@@ -9,6 +9,8 @@
 # =========================
 #       VARIABLES
 # =========================
+$importCommands = @()
+
 # Browse the docs for other types: 
 # https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
 [pscustomobject]$terraResource = @{
@@ -20,6 +22,9 @@
     "snet" = "azurerm_subnet"
 }
 
+# =========================
+#       FUNCTIONS
+# =========================
 # Converts a stub and also displays an appropriate import command
 function Convert-Stub {
     Param(
@@ -45,6 +50,8 @@ function Convert-Stub {
     $importCommand = "terraform import `"$($terraResource."$type").$identifier`" `"$id`""
     Write-Host "$> " -nonewline -f darkgray
     Write-Host $importCommand -f blue
+
+    return $importCommand
 }
 
 # =========================
@@ -71,6 +78,7 @@ $rgInv | % {
         $base.location = $_.location
         $base.name = $rgName
 
+        # Convert
         $splat = @{
             inputStub = $stub
             name = $rgName
@@ -78,7 +86,8 @@ $rgInv | % {
             identifier = $identifier
             id = $_.id
         }
-        Convert-Stub @splat
+
+        $importCommands += Convert-Stub @splat
     } catch {
         Write-Host "Error processing '$rgName': $_" -f red
     }
@@ -126,6 +135,7 @@ $vmInv | % {
         $base.source_image_reference.sku = $_.storageProfile.imageReference.sku
         $base.source_image_reference.version = $_.storageProfile.imageReference.version
     
+        # Convert
         $splat = @{
             inputStub = $stub
             name = $vmName
@@ -133,8 +143,31 @@ $vmInv | % {
             identifier = $vmName
             id = $_.id
         }
-        Convert-Stub @splat
+
+        $importCommands += Convert-Stub @splat
     } catch {
         Write-Host "Error processing '$vmName': $_" -f red
+    }
+}
+
+# Attempt to do import of all
+if ($importCommands.count -ne 0) {
+    ''; Write-Host "$($importCommands.count) resources are ready to be imported." -f cyan
+    Write-Host "> Attempt import?" -f yellow
+
+    if ((Read-Host "y/N") -eq "y") {
+        $importCommands | % {
+            $identifier = $_.split(" ")[2] -replace '"', ""
+            Write-Host "> $identifier" -f cyan
+
+            try {
+                # TODO: Get terraform init data to current location
+                Invoke-Expression $_
+            } catch {
+                Write-Host "  > FAIL" -f red
+            }
+        }
+    } else {
+        Write-Host "> Aborted" -f DarkGray
     }
 }
