@@ -20,6 +20,33 @@
     "snet" = "azurerm_subnet"
 }
 
+# Converts a stub and also displays an appropriate import command
+function Convert-Stub {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject] $inputStub,
+        [Parameter(Mandatory=$true)]
+        [string] $name,
+        [Parameter(Mandatory=$true)]
+        [string] $type,
+        [Parameter(Mandatory=$true)]
+        [string] $identifier,
+        [Parameter(Mandatory=$true)]
+        [string] $id
+    )
+
+    # Ensures no BOM in encoding
+    [IO.File]::WriteAllLines(
+        (Join-Path (Resolve-Path $outputDir) "${type}_$name.tf.json"),
+        ($stub | ConvertTo-Json -Depth 5)
+    )
+    
+    # Import command
+    $importCommand = "terraform import `"$($terraResource."$type").$identifier`" `"$id`""
+    Write-Host "$> " -nonewline -f darkgray
+    Write-Host $importCommand -f blue
+}
+
 # =========================
 #           MAIN
 # =========================
@@ -28,15 +55,45 @@ if (-not (Test-Path $outputDir)) {
     mkdir $outputDir | Out-Null
 }
 
+# Resource groups
+Write-Host "Processing resource groups..." -f cyan
+$rgInv = (az group list | convertfrom-json) | ? name -notlike "NetworkWatcher*"
+$rgInv | % {
+    $rgName = $_.name
+    Write-Host "> $rgName" -f yellow
+    try {
+        $identifier = $rgName -replace "[^a-zA-Z0-9]", ""
+        $stub = (Get-Content ".\json\$($terraResource.rg)-stub.json") `
+            -replace "%identifier%", $identifier | `
+            ConvertFrom-Json
+        $base = $stub.resource."$($terraResource.rg)"."$identifier" # pointer!
+
+        $base.location = $_.location
+        $base.name = $rgName
+
+        $splat = @{
+            inputStub = $stub
+            name = $rgName
+            type = "rg"
+            identifier = $identifier
+            id = $_.id
+        }
+        Convert-Stub @splat
+    } catch {
+        Write-Host "Error processing '$rgName': $_" -f red
+    }
+}
+
 # Virtual machines
+''; Write-Host "Processing virtual machines..." -f cyan
 $vmInv = az vm list | convertfrom-json
 $vmInv | % {
     $vmName = $_.name
-    Write-Host $vmName -f cyan
+    Write-Host "> $vmName" -f yellow
     try {
         $stub = (Get-Content ".\json\$($terraResource.vm)-stub.json") `
             -replace "%identifier%", "$vmName" | ConvertFrom-Json
-        $base = $stub.resource."$($terraResource.vm)"."$vmName" # pointer!
+        $base = $stub.resource."$($terraResource.vm)"."$vmName"
 
         $base.name = $_.name
         $base.location = $_.location
@@ -53,9 +110,9 @@ $vmInv | % {
         $base.admin_username = $_.osProfile.adminUsername
 
         # The admin password is irretrievable
-        Write-Host "> Please provide the admin password." -f yellow
-        Write-Host "  Leave blank to generate one." -f Yellow
-        $pass = Read-Host "Password"
+        Write-Host "  > Please provide the admin password." -f yellow
+        Write-Host "    Leave blank to generate one." -f Yellow
+        $pass = Read-Host "  > Password"
 
         if ([String]::IsNullOrEmpty($pass)) {
             Write-Host "> Randomly generating one..." -f yellow
@@ -69,16 +126,14 @@ $vmInv | % {
         $base.source_image_reference.sku = $_.storageProfile.imageReference.sku
         $base.source_image_reference.version = $_.storageProfile.imageReference.version
     
-        # Ensures no BOM in encoding
-        [IO.File]::WriteAllLines(
-            ((Join-Path $outputDir "vm_$vmName.tf.json") | Resolve-Path),
-            ($stub | ConvertTo-Json -Depth 5)
-        )
-        
-        # Import command
-        $importCommand = "terraform import `"$($terraResource.vm).$vmName`" `"$($_.id)`""
-        Write-Host "$> " -nonewline -f darkgray
-        Write-Host $importCommand -f blue
+        $splat = @{
+            inputStub = $stub
+            name = $vmName
+            type = "vm"
+            identifier = $vmName
+            id = $_.id
+        }
+        Convert-Stub @splat
     } catch {
         Write-Host "Error processing '$vmName': $_" -f red
     }
