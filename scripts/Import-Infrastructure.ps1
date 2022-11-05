@@ -85,9 +85,9 @@ $rgInv | % {
     Write-Host "> $rgName" -f yellow
     try {
         if ($UseMinimalIdentifiers.IsPresent) {
-            $identifier = $rgName -replace "[^a-zA-Z0-9]", ""
-        } else {
             $identifier = "rg"
+        } else {
+            $identifier = $rgName -replace "[^a-zA-Z0-9]", ""
         }
 
         $stub = (Get-Content ".\json\$($terraResource.rg)-stub.json") `
@@ -121,14 +121,14 @@ $vmInv | % {
     Write-Host "> $vmName" -f yellow
     try {
         if ($UseMinimalIdentifiers.IsPresent) {
-            $identifier = $vmName -replace "[^a-zA-Z0-9]", ""
+            $identifier = "vm"
         } else {
-            $identifier = "rg"
+            $identifier = $vmName -replace "[^a-zA-Z0-9]", ""
         }
 
         $stub = (Get-Content ".\json\$($terraResource.vm)-stub.json") `
             -replace "%identifier%", "$identifier" | ConvertFrom-Json
-        $base = $stub.resource."$($terraResource.vm)"."$vmName"
+        $base = $stub.resource."$($terraResource.vm)"."$identifier"
 
         $base.name = $_.name
         $base.location = $_.location
@@ -166,7 +166,7 @@ $vmInv | % {
             inputStub = $stub
             name = $vmName
             type = "vm"
-            identifier = $vmName
+            identifier = $identifier
             id = $_.id
         }
 
