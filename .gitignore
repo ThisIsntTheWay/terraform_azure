@@ -2,6 +2,7 @@
 tenantData/
 */.terraform/
 */secrets/
+/scripts/output
 
 # Files
 .terraform*
