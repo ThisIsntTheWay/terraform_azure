@@ -2,15 +2,15 @@
 	.DESCRIPTION
 		Attempts to create .tf.json files for to-be-imported infrastructure.
     
-    .PARAMETER UseMinimalIdentifiers
+    .PARAMETER UseExplicitIdentifiers
         If supplied, the state will not use the name of the to-be-imported resource.
         
         E.G: Resource (VM) is called "testVm1"
         Without this parameter, the state would be called:
-         > azurerm_windows_virtual_machine.testVm1
+         > azurerm_windows_virtual_machine. > vm <
         
-         With this parameter, it would instead be called:
-         > azurerm_windows_virtual_machine.vm
+        With this parameter, it would instead be called:
+         > azurerm_windows_virtual_machine. > testVm1 <
     
     .AUTHOR
 		Valentin Klopfenstein
@@ -18,7 +18,7 @@
 
 Param(
     [Parameter(Mandatory=$false)]
-    [switch] $UseMinimalIdentifiers
+    [switch] $UseExplicitIdentifiers
 )
 
 # =========================
@@ -36,6 +36,23 @@ $importCommands = @()
     "vnet" = "azurerm_virtual_network"
     "snet" = "azurerm_subnet"
 }
+
+@{
+    "resource" = @{
+        $terraResource.nic = @{
+            "%identifier%" = @{
+                "name" = $null
+                "location" = $null
+                "resource_group_name" = $null
+                "ip_configuration" = @{
+                    "name" = $null
+                    "subnet_id" = $null
+                    "private_ip_address_allocation" = $null
+                }
+            }
+        }
+    }
+} | ConvertTo-Json -Depth 5 | Out-File ".\json\$($terraResource.nic)-stub.json"
 
 # =========================
 #       FUNCTIONS
@@ -79,15 +96,15 @@ if (-not (Test-Path $outputDir)) {
 
 # Resource groups
 Write-Host "Processing resource groups..." -f cyan
-$rgInv = (az group list | convertfrom-json) | ? name -notlike "NetworkWatcher*"
+$rgInv = (az group list | ConvertFrom-Json) | ? name -notlike "NetworkWatcher*"
 $rgInv | % {
     $rgName = $_.name
     Write-Host "> $rgName" -f yellow
     try {
-        if ($UseMinimalIdentifiers.IsPresent) {
-            $identifier = "rg"
-        } else {
+        if ($UseExplicitIdentifiers.IsPresent) {
             $identifier = $rgName -replace "[^a-zA-Z0-9]", ""
+        } else {
+            $identifier = "rg"
         }
 
         $stub = (Get-Content ".\json\$($terraResource.rg)-stub.json") `
@@ -115,15 +132,15 @@ $rgInv | % {
 
 # Virtual machines
 ''; Write-Host "Processing virtual machines..." -f cyan
-$vmInv = az vm list | convertfrom-json
+$vmInv = az vm list | ConvertFrom-Json
 $vmInv | % {
     $vmName = $_.name
     Write-Host "> $vmName" -f yellow
     try {
-        if ($UseMinimalIdentifiers.IsPresent) {
-            $identifier = "vm"
-        } else {
+        if ($UseExplicitIdentifiers.IsPresent) {
             $identifier = $vmName -replace "[^a-zA-Z0-9]", ""
+        } else {
+            $identifier = "vm"
         }
 
         $stub = (Get-Content ".\json\$($terraResource.vm)-stub.json") `
@@ -176,7 +193,10 @@ $vmInv | % {
     }
 }
 
-# Attempt to do import of all
+''; Write-Host "Processing VNET..." -f cyan
+$vnetInv = az network vnet list | ConvertFrom-Json
+
+# Attempt to import the whole infrastructure in terraform
 if ($importCommands.count -ne 0) {
     ''; Write-Host "$($importCommands.count) resources are ready to be imported." -f cyan
     Write-Host "> Attempt import?" -f yellow
