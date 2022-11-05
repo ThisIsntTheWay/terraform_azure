@@ -160,11 +160,43 @@ if ($importCommands.count -ne 0) {
             $identifier = $_.split(" ")[2] -replace '"', ""
             Write-Host "> $identifier" -f cyan
 
+            # Copy terraform init data and import configs to a temp directory
+            $suffix = [guid]::NewGuid().guid.split("-")[0]
+            $tempLocation = Join-Path $env:TEMP "terraImport_$suffix"
+            $thisLocation = Get-Location
+
             try {
+                if (-not (Test-Path $tempLocation)) {
+                    mkdir $tempLocation |  out-null
+                }
+
                 # TODO: Get terraform init data to current location
+                # Assuming we're running in root\scripts
+                $requiredItems = @(".terraform", "main.tf", ".terraform.lock.hcl")
+                $requiredItems | % {
+                    $item = "..\runbooks\$_"
+                    Copy-Item $item $tempLocation -Force -Recurse
+                }
+
+                Copy-Item ".\output\*" $tempLocation -Force
+
+                # Attempt import
+                Set-Location $tempLocation
+                #Invoke-Expression "terraform init" | out-null
                 Invoke-Expression $_
             } catch {
-                Write-Host "  > FAIL" -f red
+                Write-Host "  > FAIL: $_" -f red
+            } finally {
+                # Cleanup, first the files then the folder itself
+                # This prevents the "... because it is in use." error.
+                if (Test-Path $tempLocation) {
+                    gci $tempLocation | % {
+                        Remove-item $_ -Force -Recurse -ea SilentlyContinue
+                    }
+                }
+                Remove-item $tempLocation -Force -Recurse -ea SilentlyContinue
+
+                Set-Location $thisLocation
             }
         }
     } else {
