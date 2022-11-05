@@ -2,9 +2,24 @@
 	.DESCRIPTION
 		Attempts to create .tf.json files for to-be-imported infrastructure.
     
-	.AUTHOR
+    .PARAMETER UseMinimalIdentifiers
+        If supplied, the state will not use the name of the to-be-imported resource.
+        
+        E.G: Resource (VM) is called "testVm1"
+        Without this parameter, the state would be called:
+         > azurerm_windows_virtual_machine.testVm1
+        
+         With this parameter, it would instead be called:
+         > azurerm_windows_virtual_machine.vm
+    
+    .AUTHOR
 		Valentin Klopfenstein
 #>
+
+Param(
+    [Parameter(Mandatory=$false)]
+    [switch] $UseMinimalIdentifiers
+)
 
 # =========================
 #       VARIABLES
@@ -69,7 +84,12 @@ $rgInv | % {
     $rgName = $_.name
     Write-Host "> $rgName" -f yellow
     try {
-        $identifier = $rgName -replace "[^a-zA-Z0-9]", ""
+        if ($UseMinimalIdentifiers.IsPresent) {
+            $identifier = $rgName -replace "[^a-zA-Z0-9]", ""
+        } else {
+            $identifier = "rg"
+        }
+
         $stub = (Get-Content ".\json\$($terraResource.rg)-stub.json") `
             -replace "%identifier%", $identifier | `
             ConvertFrom-Json
@@ -100,8 +120,14 @@ $vmInv | % {
     $vmName = $_.name
     Write-Host "> $vmName" -f yellow
     try {
+        if ($UseMinimalIdentifiers.IsPresent) {
+            $identifier = $vmName -replace "[^a-zA-Z0-9]", ""
+        } else {
+            $identifier = "rg"
+        }
+
         $stub = (Get-Content ".\json\$($terraResource.vm)-stub.json") `
-            -replace "%identifier%", "$vmName" | ConvertFrom-Json
+            -replace "%identifier%", "$identifier" | ConvertFrom-Json
         $base = $stub.resource."$($terraResource.vm)"."$vmName"
 
         $base.name = $_.name
