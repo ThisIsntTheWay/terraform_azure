@@ -1,5 +1,5 @@
 resource "azurerm_network_interface" "nic" {
-  count               = length(var.vmNames)
+  count = length(var.vmNames)
 
   name = "${var.vmNames[count.index]}-nic"
   #name                = "${var.tenant}-nic-${var.serverType}-prod-chno-00${count.index}"

@@ -12,6 +12,7 @@
 variable "vmNames" {
   description = "Name(s) of virtual machine(s) to be created"
   type        = list(string)
+  default     = []
 }
 
 variable "serverSize" {

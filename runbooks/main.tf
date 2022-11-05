@@ -13,7 +13,7 @@ terraform {
     #storage_account_name = var.storageAccountName
     #container_name       = var.storageAccountContainer
 
-    key                  = "terraform.tfstate"
+    key = "terraform.tfstate"
   }
 
   required_version = ">= 1.1.0"
