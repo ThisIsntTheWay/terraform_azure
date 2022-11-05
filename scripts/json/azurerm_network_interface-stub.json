@@ -1,0 +1,16 @@
+{
+    "resource": {
+        "azurerm_network_interface": {
+            "%identifier%": {
+                "resource_group_name": null,
+                "name": null,
+                "location": null,
+                "ip_configuration": {
+                    "private_ip_address_allocation": null,
+                    "name": null,
+                    "subnet_id": null
+                }
+            }
+        }
+    }
+}

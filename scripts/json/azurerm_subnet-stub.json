@@ -1,0 +1,14 @@
+{
+    "resource": {
+        "azurerm_subnet": {
+            "%identifier%": {
+                "virtual_network_name": null,
+                "name": null,
+                "resource_group_name": null,
+                "address_prefixes": [
+
+                ]
+            }
+        }
+    }
+}
