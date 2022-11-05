@@ -1,5 +1,8 @@
 resource "azurerm_network_interface" "nic" {
-  name                = "${var.tenant}-nic-${var.serverType}-prod-chno-001"
+  count               = length(var.vmNames)
+
+  name = "${var.vmNames[count.index]}-nic"
+  #name                = "${var.tenant}-nic-${var.serverType}-prod-chno-00${count.index}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -11,12 +14,16 @@ resource "azurerm_network_interface" "nic" {
 }
 
 resource "azurerm_windows_virtual_machine" "main" {
+  count = length(var.vmNames)
+
   # Bug: "Name" constrained to 15 characters
-  name = "${upper(var.tenant)}${upper(var.serverType)}001"
+  name = var.vmNames[count.index]
+  #name  = "${upper(var.tenant)}${upper(var.serverType)}00${count.index}"
   #computer_name         = "${var.tenant}-${var.serverType}-prod-chno-001"
+
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
-  network_interface_ids = [azurerm_network_interface.nic.id]
+  network_interface_ids = [azurerm_network_interface.nic[count.index].id]
   size                  = var.serverSize
 
   admin_username = var.adminUsername

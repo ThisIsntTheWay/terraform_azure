@@ -1,12 +1,17 @@
 # ===================================================
 # Virtual Machines
-variable "serverType" {
+/*variable "serverType" {
   description = "What type of service the VM will provide (ap, dc, db...)"
 
   validation {
     condition     = can(regex("[^0-9]{2}", var.serverType)) && length(var.serverType) == 2
     error_message = "'serverType' must be 2 characters long and may only contain letters."
   }
+}*/
+
+variable "vmNames" {
+  description = "Name(s) of virtual machine(s) to be created"
+  type        = list(string)
 }
 
 variable "serverSize" {
