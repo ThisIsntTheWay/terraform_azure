@@ -53,15 +53,20 @@ if (-not (Test-Path $env:IMPORTER_outputDir)) {
 }
 
 # Import
-Get-ResourceGroups | % { $importCommands += $_ }
-''; Get-Vms | % { $importCommands += $_ }
-''; Get-Vnets | % { $importCommands += $_ }
+$importCommands += Get-ResourceGroups
+''; $importCommands += Get-Vms
+''; $importCommands += Get-Vnets
 
-# Clear empty entires
+# Clear empty entries
 $importCommands = $importCommands | ? { $_ }
 
 # Attempt to import the whole infrastructure in terraform
 if ($importCommands.count -ne 0) {
+    # Export commands to a file for later execution
+    $outFile = ".\output\terraform-import.bat"
+    $fileContent = "REM Generated: $(Get-Date)`n$($importCommands -join "`n")"
+    $fileContent | Out-File $outFile -Encoding UTF8 -Force
+
     ''; Write-Host "$($importCommands.count) resources are ready to be imported." -f cyan
     Write-Host "> Attempt import?" -f yellow
 
