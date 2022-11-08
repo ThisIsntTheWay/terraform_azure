@@ -19,6 +19,11 @@
 
 Param(
 	[Parameter(Mandatory=$true)]
+	[ValidateScript({
+		if ($_.length -lt 4) {
+			throw "Argument must be at least 4 characters."
+		} else { $true }
+	})]
 	[string] $Tenant
 )
 
@@ -195,7 +200,7 @@ try {
 		$subId = (az account show | convertfrom-json).id
 		
 		''; Write-Host "Creating a service principal with role 'Contributor'..." -f cyan
-		Write-Warning "This will store an encrypted password in .\tenantData!"
+		Write-Warning "This will store an encrypted password in '.\tenantData\$tenant.json'!"
 		$sp = az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$subId" | ConvertFrom-Json
 		
 		# Store sp data for tenant
@@ -209,25 +214,28 @@ try {
 		$sp | Add-Member -NotePropertyName "subscriptionId" -NotePropertyValue $tenantData.id
 
 		# Create or select storage account for state file(s)
+		$terraformRgName = "terraform"
 		$resourceGroups = az group list | ConvertFrom-Json
-		if ($resourceGroups) {
-			''; Write-Host "Please select a resource group for storing terraform state files." -f cyan
-			Write-Host "> State files will ultimately be stored in a storage container." -f yellow
+		$terraResourceGroup = $resourceGroups | ? Name -eq $terraformRgName
+		if (-not $terraResourceGroup) {
+			''; Write-Warning "No resource group for terraform (Name: '$terraformRgName') was found, creating..."
 
-			$resourceGroup = Select-Resource $resourceGroups
+			$terraResourceGroup = az group create -l switzerlandnorth -n $terraformRgName | ConvertFrom-Json
 
 			# Iterate storage accounts
-			$storageAccounts = az storage account list -g $resourceGroup.name | ConvertFrom-Json
+			$storageAccounts = az storage account list -g $terraResourceGroup.name | ConvertFrom-Json
 			if ($storageAccounts) {
 				''; Write-Host "Please select a storage account for creating a terraform storage container." -f cyan
 				$storageAccount = Select-Resource $storageAccounts
 			} else {
-				$name = "$($tenant.toLower())stprod001"
-				''; Write-Warning "No storage account exists."
+				$random = [guid]::NewGuid().guid.split("-")[0]
+				$tenantShort = $tenant.Substring(0, 4)
+				$name = "$($tenantShort.toLower())terra$random"
+				''; Write-Warning "No storage account within '$($terraResourceGroup.name)' was found."
 
 				Write-Host "> Creating account '$name'..." -f yellow
 				$storageAccount = (az storage account create -n $name `
-					-g $resourceGroup.name `
+					-g $terraResourceGroup.name `
 					-l switzerlandnorth `
 					--sku Standard_LRS `
 					--allow-blob-public-access $true) | ConvertFrom-Json
@@ -251,7 +259,7 @@ try {
 			# Store into sp data json
 			$sp | Add-Member -NotePropertyName "storageAccount" -NotePropertyValue $storageAccount.name
 			$sp | Add-Member -NotePropertyName "storageKey" -NotePropertyValue $storageKeyEncrypted
-			$sp | Add-Member -NotePropertyName "storageRg" -NotePropertyValue $resourceGroup.name
+			$sp | Add-Member -NotePropertyName "storageRg" -NotePropertyValue $terraResourceGroup.name
 			$sp | Add-Member -NotePropertyName "storageContainer" -NotePropertyValue $storageContainer
 		}
 
