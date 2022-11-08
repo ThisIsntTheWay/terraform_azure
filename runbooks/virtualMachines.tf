@@ -1,7 +1,20 @@
-resource "azurerm_network_interface" "nic" {
-  count = length(var.vmNames)
+/*resource "azurerm_managed_disk" "vmDisk" {
+  count = length(var.vmConfiguration)
 
-  name = "${var.vmNames[count.index]}-nic"
+  name = "${var.vmConfiguration[count.index]}-disk"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  storage_account_type = "Standard_LRS"
+
+  tags = {
+    author = var.author
+  }
+}*/
+
+resource "azurerm_network_interface" "nic" {
+  for_each = var.vmConfiguration
+
+  name = "${each.key}-nic"
   #name                = "${var.tenant}-nic-${var.serverType}-prod-chno-00${count.index}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
@@ -11,20 +24,22 @@ resource "azurerm_network_interface" "nic" {
     subnet_id                     = azurerm_subnet.snet.id
     private_ip_address_allocation = "Dynamic"
   }
+
+  tags = local.tags
 }
 
 resource "azurerm_windows_virtual_machine" "main" {
-  count = length(var.vmNames)
+  for_each = var.vmConfiguration
 
   # Bug: "Name" constrained to 15 characters
-  name = var.vmNames[count.index]
+  name = each.key
   #name  = "${upper(var.tenant)}${upper(var.serverType)}00${count.index}"
   #computer_name         = "${var.tenant}-${var.serverType}-prod-chno-001"
 
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
-  network_interface_ids = [azurerm_network_interface.nic[count.index].id]
-  size                  = var.serverSize
+  network_interface_ids = [azurerm_network_interface.nic[each.key].id]
+  size                  = each.value
 
   admin_username = var.adminUsername
   admin_password = var.adminPassword
@@ -40,4 +55,6 @@ resource "azurerm_windows_virtual_machine" "main" {
     sku       = var.serverSku
     version   = "latest"
   }
+
+  tags = local.tags
 }

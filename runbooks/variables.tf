@@ -9,10 +9,10 @@
   }
 }*/
 
-variable "vmNames" {
-  description = "Name(s) of virtual machine(s) to be created"
-  type        = list(string)
-  default     = []
+variable "vmConfiguration" {
+  description = "VMs to create (Schema: 'name' = 'size')"
+  type        = map(string)
+  default     = {}
 }
 
 variable "serverSize" {

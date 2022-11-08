@@ -3,6 +3,8 @@ resource "azurerm_virtual_network" "vnet" {
   address_space       = ["10.40.0.0/16"]
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
+
+  tags = local.tags
 }
 
 resource "azurerm_subnet" "snet" {
@@ -23,15 +25,16 @@ resource "azurerm_network_security_group" "nsg" {
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
-    source_port_range          = 3389
+    source_port_range          = "*"
     destination_port_range     = 3389
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
 
-  tags = {
-    Tenant = var.tenant
-    Author = var.author
-  }
+  tags = local.tags
 }
 
+resource "azurerm_subnet_network_security_group_association" "nsgAssociation" {
+  subnet_id                 = azurerm_subnet.snet.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
+}
