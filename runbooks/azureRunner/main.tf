@@ -36,7 +36,7 @@ resource "azurerm_public_ip" "runnerPublicIp" {
 }
 
 resource "azurerm_network_interface" "runnerNic" {
-  name                = "terraform-runner-${local.location.id}-nic"
+  name                = "runner-${local.location.id}-nic"
   location            = local.location.name
   resource_group_name = local.resourcegroup
 
@@ -49,7 +49,7 @@ resource "azurerm_network_interface" "runnerNic" {
 }
 
 resource "azurerm_network_security_group" "runnerNsg" {
-  name                = "terraform-runner-${local.location.id}-nsg"
+  name                = "runner-${local.location.id}-nsg"
   location            = local.location.name
   resource_group_name = local.resourcegroup
 
