@@ -3,6 +3,7 @@ tenantData/
 */.terraform/
 */secrets/
 /scripts/output
+.vscode
 
 # Files
 .terraform*
