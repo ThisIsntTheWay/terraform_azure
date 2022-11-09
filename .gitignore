@@ -9,3 +9,4 @@ tenantData/
 .terraform*
 *.tfstate*
 terra*.exe
+*.pub
