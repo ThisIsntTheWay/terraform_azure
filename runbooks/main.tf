@@ -22,3 +22,8 @@ terraform {
 provider "azurerm" {
   features {}
 }
+
+module "runner" {
+  source = "./azureRunner"
+  # terraform apply "-target=module.runner.azurerm_linux_virtual_machine.runner"
+}
