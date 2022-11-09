@@ -1,6 +1,6 @@
 # terraform_azure
 
-Terraform Azure sample.
+Terraform Azure example.
 
 To get started:
 ```PowerShell
