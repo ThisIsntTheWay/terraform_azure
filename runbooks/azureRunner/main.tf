@@ -24,6 +24,17 @@ resource "azurerm_subnet" "runnerSnet" {
   address_prefixes     = ["10.0.2.0/24"]
 }
 
+resource "azurerm_public_ip" "runnerPublicIp" {
+  name                = "runner-${local.location.id}-ip"
+  resource_group_name = local.resourcegroup
+  location            = local.location.name
+  allocation_method   = "Static"
+
+  tags = {
+    environment = "Production"
+  }
+}
+
 resource "azurerm_network_interface" "runnerNic" {
   name                = "terraform-runner-${local.location.id}-nic"
   location            = local.location.name
@@ -33,6 +44,7 @@ resource "azurerm_network_interface" "runnerNic" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.runnerSnet.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.runnerPublicIp.id
   }
 }
 
