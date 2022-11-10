@@ -213,7 +213,7 @@ try {
 		$sp.password = (ConvertTo-SecureString $password -AsPlainText -Force) | ConvertFrom-SecureString
 		$sp | Add-Member -NotePropertyName "subscriptionId" -NotePropertyValue $tenantData.id
 
-		# Create or select storage account for state file(s)
+		# Create or select resource group for state file
 		$terraformRgName = "terraform"
 		$resourceGroups = az group list | ConvertFrom-Json
 		$terraResourceGroup = $resourceGroups | ? Name -eq $terraformRgName
@@ -221,47 +221,48 @@ try {
 			''; Write-Warning "No resource group for terraform (Name: '$terraformRgName') was found, creating..."
 
 			$terraResourceGroup = az group create -l switzerlandnorth -n $terraformRgName | ConvertFrom-Json
-
-			# Iterate storage accounts
-			$storageAccounts = az storage account list -g $terraResourceGroup.name | ConvertFrom-Json
-			if ($storageAccounts) {
-				''; Write-Host "Please select a storage account for creating a terraform storage container." -f cyan
-				$storageAccount = Select-Resource $storageAccounts
-			} else {
-				$random = [guid]::NewGuid().guid.split("-")[0]
-				$tenantShort = $tenant.Substring(0, 4)
-				$name = "$($tenantShort.toLower())terra$random"
-				''; Write-Warning "No storage account within '$($terraResourceGroup.name)' was found."
-
-				Write-Host "> Creating account '$name'..." -f yellow
-				$storageAccount = (az storage account create -n $name `
-					-g $terraResourceGroup.name `
-					-l switzerlandnorth `
-					--sku Standard_LRS `
-					--allow-blob-public-access $true) | ConvertFrom-Json
-			}
-
-			# Create storage container
-			# Get storage account key
-			$storageKey = (az storage account keys list -n $storageAccount.Name | ConvertFrom-Json)[0].value
-			
-			# Encrypt storage key for json
-			$storageKeyEncrypted = ConvertTo-SecureString $storageKey -AsPlainText -Force | ConvertFrom-SecureString
-
-			# Create container
-			$storageContainer = "terraform"
-			Write-Host "> Creating container '$storageContainer'..." -f yellow
-			az storage container create -n $storageContainer `
-				--account-name $storageAccount.name `
-				--account-key $storageKey `
-				--public-access blob | Out-Null
-
-			# Store into sp data json
-			$sp | Add-Member -NotePropertyName "storageAccount" -NotePropertyValue $storageAccount.name
-			$sp | Add-Member -NotePropertyName "storageKey" -NotePropertyValue $storageKeyEncrypted
-			$sp | Add-Member -NotePropertyName "storageRg" -NotePropertyValue $terraResourceGroup.name
-			$sp | Add-Member -NotePropertyName "storageContainer" -NotePropertyValue $storageContainer
 		}
+
+		# Identify or create storage account
+		$storageAccounts = az storage account list -g $terraResourceGroup.name | ConvertFrom-Json
+		if ($storageAccounts) {
+			''; Write-Host "Please select a storage account to store your terraform storage container." -f cyan
+			$storageAccount = Select-Resource $storageAccounts
+		} else {
+			$random = [guid]::NewGuid().guid.split("-")[0]
+			$tenantShort = $tenant.Substring(0, 4)
+			$name = "$($tenantShort.toLower())terra$random"
+			''; Write-Warning "No storage account within '$($terraResourceGroup.name)' was found."
+
+			Write-Host "> Creating account '$name'..." -f yellow
+			$storageAccount = (az storage account create -n $name `
+				-g $terraResourceGroup.name `
+				-l switzerlandnorth `
+				--sku Standard_LRS `
+				--allow-blob-public-access $true) | ConvertFrom-Json
+		}
+
+		# Create storage container
+		# Get storage account key
+		$storageKey = (az storage account keys list -n $storageAccount.Name | ConvertFrom-Json)[0].value
+		
+		# Encrypt storage key for json
+		$storageKeyEncrypted = ConvertTo-SecureString $storageKey -AsPlainText -Force | ConvertFrom-SecureString
+
+		# Create container
+		$storageContainer = "terraform"
+		Write-Host "> Creating container '$storageContainer'..." -f yellow
+		az storage container create -n $storageContainer `
+			--account-name $storageAccount.name `
+			--account-key $storageKey `
+			--public-access blob | Out-Null
+
+		# Store into sp data json
+		$sp | Add-Member -NotePropertyName "storageAccount" -NotePropertyValue $storageAccount.name
+		$sp | Add-Member -NotePropertyName "storageKey" -NotePropertyValue $storageKeyEncrypted
+		$sp | Add-Member -NotePropertyName "storageRg" -NotePropertyValue $terraResourceGroup.name
+		$sp | Add-Member -NotePropertyName "storageContainer" -NotePropertyValue $storageContainer
+	
 
 		$sp | ConvertTo-Json | Out-File $spFile -Encoding Utf8
 		Write-Host "> Saved to: $spFile" -f yellow
