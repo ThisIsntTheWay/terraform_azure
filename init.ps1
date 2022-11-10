@@ -9,9 +9,12 @@
 
 		If this script is executed with a new tenant, then the infrastructure will be prepared accordingly.
 	
-	.PARAMETER tenant
+	.PARAMETER Tenant
 		Tenant for which to initalize terraform for.
 		This information is ultimately used to load the appropriate json under .\tenantData
+		
+	.PARAMETER Reconfigure
+		Append the 'terraform init' command with the '-reconfigure' switch.
 
 	.AUTHOR
 		Valentin Klopfenstein
@@ -24,7 +27,9 @@ Param(
 			throw "Argument must be at least 4 characters."
 		} else { $true }
 	})]
-	[string] $Tenant
+	[string] $Tenant,
+	[Parameter(Mandatory=$false)]
+	[switch] $Reconfigure
 )
 
 # =========================
@@ -289,8 +294,10 @@ try {
 	''; Write-Host "Initializing terraform..." -f cyan
 
 	$accent = [char]96
+	$reconfigureParam = if ($Reconfigure.IsPresent) { '-reconfigure' } else { $null }
+
 	$initCommand = @"
-terraform init $accent
+terraform init $reconfigureParam $accent
 	-backend-config="resource_group_name=$($sp.storageRg)" $accent
 	-backend-config="storage_account_name=$($sp.storageAccount)" $accent
 	-backend-config="container_name=$($sp.storageContainer)"
