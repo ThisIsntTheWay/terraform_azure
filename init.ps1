@@ -14,7 +14,7 @@
 		This information is ultimately used to load the appropriate json under .\tenantData
 		
 	.PARAMETER Reconfigure
-		Append the 'terraform init' command with the '-reconfigure' switch.
+		Append the '-reconfigure' switch to the 'terraform init' command.
 
 	.AUTHOR
 		Valentin Klopfenstein
