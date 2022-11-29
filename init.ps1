@@ -110,7 +110,7 @@ if (-not (gci .\terraform*.exe)) {
 	}
 }
 
-# Check for terragrunt
+<# Check for terragrunt
 if (-not (gci .\terragrunt*.exe)) {
 	try {
 		$binaryName = "terragrunt_windows_amd64.exe"
@@ -122,7 +122,7 @@ if (-not (gci .\terragrunt*.exe)) {
 	} catch {
 		throw "Terraform binary setup failure: $_"
 	}
-}
+}#>
 
 # Check for Azure CLI
 $ErrorActionPreference = 'continue'
