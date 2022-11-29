@@ -71,48 +71,53 @@ if ($importCommands.count -ne 0) {
     Write-Host "> Attempt import?" -f yellow
 
     if ((Read-Host "y/N") -eq "y") {
-        $importCommands | % {
-            # terraform import -> "identifier" <- "id"
-            $identifier = $_.split(" ")[2] -replace '"', ""
-            Write-Host "> $identifier" -f cyan
+        # Copy terraform init data and import configs to a temp directory
+        $suffix = [guid]::NewGuid().guid.split("-")[0]
+        $tempLocation = Join-Path $env:TEMP "terraImport_$suffix"
+        $thisLocation = Get-Location
 
-            # Copy terraform init data and import configs to a temp directory
-            $suffix = [guid]::NewGuid().guid.split("-")[0]
-            $tempLocation = Join-Path $env:TEMP "terraImport_$suffix"
-            $thisLocation = Get-Location
-
-            try {
-                if (-not (Test-Path $tempLocation)) {
-                    mkdir $tempLocation |  out-null
-                }
-
-                # Assuming we're running in root\scripts
-                $requiredItems = @(".terraform", "main.tf", ".terraform.lock.hcl")
-                $requiredItems | % {
-                    $item = "..\runbooks\$_"
-                    Copy-Item $item $tempLocation -Force -Recurse
-                }
-
-                Copy-Item ".\output\*" $tempLocation -Force
-
-                # Attempt import
-                Set-Location $tempLocation
-                #Invoke-Expression "terraform init" | out-null
-                Invoke-Expression $_
-            } catch {
-                Write-Host "  > FAIL: $_" -f red
-            } finally {
-                # Cleanup, first the files then the folder itself
-                # This prevents the "... because it is in use." error.
-                if (Test-Path $tempLocation) {
-                    gci $tempLocation | % {
-                        Remove-item $_ -Force -Recurse -ea SilentlyContinue
-                    }
-                }
-                Remove-item $tempLocation -Force -Recurse -ea SilentlyContinue
-
-                Set-Location $thisLocation
+        try {
+            Write-Host ""
+            if (-not (Test-Path $tempLocation)) {
+                mkdir $tempLocation |  out-null
             }
+
+            # Assuming we're running in root\scripts
+            $requiredItems = @(".terraform", "main.tf", ".terraform.lock.hcl")
+            $requiredItems | % {
+                $item = "..\runbooks\$_"
+                Copy-Item $item $tempLocation -Force -Recurse
+            }
+
+            Copy-Item ".\output\*" $tempLocation -Force
+
+            # Attempt import
+            Set-Location $tempLocation
+            $importCommands | % {
+                # terraform import -> "identifier" <- "id"
+                $identifier = $_.split(" ")[2] -replace '"', ""
+                Write-Host "> $identifier" -f cyan
+
+                #Invoke-Expression "terraform init" | out-null
+                try {
+                    Invoke-Expression $_
+                } catch {
+                    Write-Host "  > IMPORT FAIL: $_" -f red
+                }
+            }
+        } catch {
+            Write-Host "  > FAIL: $_" -f red
+        } finally {
+            # Cleanup, first the files then the folder itself
+            # This prevents the "... because it is in use." error.
+            if (Test-Path $tempLocation) {
+                gci $tempLocation | % {
+                    Remove-item $_ -Force -Recurse -ea SilentlyContinue
+                }
+            }
+            Remove-item $tempLocation -Force -Recurse -ea SilentlyContinue
+
+            Set-Location $thisLocation
         }
     } else {
         Write-Host "> Aborted" -f DarkGray
