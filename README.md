@@ -7,7 +7,7 @@ To get started:
 init.ps1 "tenantName"
 ```
 
-Will install dependencies and prepare the logged on tenant for use with Terraform.  
+Will install dependencies and prepare an azure tenant for use with Terraform.  
 Creates a service principal, a storage account and container (if missing).
 
-Auxilliary scripts in `scripts\`
+Auxilliary scripts can be found in `scripts\`.
